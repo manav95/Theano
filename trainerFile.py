@@ -1,0 +1,78 @@
+
+
+from __future__ import absolute_import
+from __future__ import print_function
+import numpy as np
+import csv
+np.random.seed(1337)  # for reproducibility
+
+from keras.preprocessing import sequence
+from keras.optimizers import SGD, RMSprop, Adagrad
+from keras.utils import np_utils
+from keras.models import Sequential
+from keras.layers.core import Dense, Dropout, Activation
+from keras.layers.embeddings import Embedding
+from keras.layers.recurrent import LSTM,SimpleRNN, GRU
+from formatFile import pathString
+
+'''
+    Train a LSTM on the IMDB sentiment classification task.
+    The dataset is actually too small for LSTM to be of any advantage
+    compared to simpler, much faster methods such as TF-IDF+LogReg.
+    Notes:
+    - RNNs are tricky. Choice of batch size is important,
+    choice of loss and optimizer is critical, etc.
+    Some configurations won't converge.
+    - LSTM loss decrease patterns during training can be quite different
+    from what you see with CNNs/MLPs/etc.
+    GPU command:
+        THEANO_FLAGS=mode=FAST_RUN,device=gpu,floatX=float32 python imdb_lstm.py
+'''
+
+max_features = 1
+batch_size = 20
+
+print("Loading data...")
+first_Train, second_Train = pathString("gas-prices12.csv", test_split=0.2)
+X_train = [[x[1]] for x in first_Train]
+X_test =  [[x[1]] for x in second_Train]
+Y_train = [[y[0]] for y in first_Train]
+Y_test =  [[y[0]] for y in second_Train]
+print(len(X_train), 'train sequences')
+print(len(X_test), 'test sequences')
+
+print("Pad sequences (samples x time)")
+X_train = sequence.pad_sequences(X_train, maxlen=1)
+X_test = sequence.pad_sequences(X_test, maxlen=1)
+#X_train = np.reshape(X_train, (1, X_train.shape[0], X_train.shape[1]))
+#X_test = np.reshape(X_test, (1, X_test.shape[0], X_test.shape[1]))
+print(type(X_train))
+print(type(X_test))
+print('X_train shape:', X_train.shape)
+print('X_test shape:', X_test.shape)
+
+print('Build model...')
+
+in_out_neurons = len(first_Train)
+hidden_neurons = 20
+model = Sequential()
+model.add(Dense(1,1,init='uniform', activation='tanh'))
+model.add(Activation('tanh'))
+
+
+# try using different optiloss='mean_absolute_error', optimizer='rmsprop'mizers and different optimizer configs
+model.compile(loss='mean_squared_error', optimizer='rmsprop')
+
+print("Train...")
+model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=50, validation_data=(X_test, Y_test))
+score = model.evaluate(X_test, Y_test, batch_size=20)
+print(score)
+with open('file.csv', 'wb') as csvfile:
+     spamwriter = csv.writer(csvfile, delimiter=' ')
+     row = [score]
+     spamwriter.writerow(row)
+
+
+     
+
+
